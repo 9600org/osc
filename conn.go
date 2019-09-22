@@ -29,12 +29,24 @@ type Conn interface {
 	SendTo(net.Addr, Packet) error
 }
 
-var invalidAddressRunes = []rune{'*', '?', ',', '[', ']', '{', '}', '#', ' '}
+var (
+	invalidAddressRunes      = []rune{'#', ' '}
+	invalidExactAddressRunes = append([]rune{'*', '?', '{', '}', ',', '[', ']'}, invalidAddressRunes...)
+)
 
 // ValidateAddress returns an error if addr contains
 // characters that are disallowed by the OSC spec.
-func ValidateAddress(addr string) error {
-	for _, chr := range invalidAddressRunes {
+// If exactMatch is true, then the check is relaxed to allow pattern matching
+// characters.
+func ValidateAddress(addr string, exactMatch bool) error {
+	var invalidRunes []rune
+	if exactMatch {
+		invalidRunes = invalidExactAddressRunes
+	} else {
+		// TODO: validate pattern correctness - e.g. balanced brackets, etc.
+		invalidRunes = invalidAddressRunes
+	}
+	for _, chr := range invalidRunes {
 		if strings.ContainsRune(addr, chr) {
 			return ErrInvalidAddress
 		}

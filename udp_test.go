@@ -11,22 +11,43 @@ import (
 )
 
 func TestInvalidAddress(t *testing.T) {
-	laddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	server, err := ListenUDP("udp", laddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = server.Close() }() // Best effort.
+	for _, test := range []struct {
+		desc       string
+		address    string
+		exactMatch bool
+	}{
+		{
+			desc:       "InvalidExactAddress",
+			address:    "/[",
+			exactMatch: true,
+		}, {
+			desc:       "InvalidPatternAddress",
+			address:    "/#",
+			exactMatch: false,
+		},
+	} {
+		t.Run(test.desc, func(t *testing.T) {
+			laddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			server, err := ListenUDP("udp", laddr)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	if err := server.Serve(1, Dispatcher{
-		"/[": Method(func(msg Message) error {
-			return nil
-		}),
-	}); err != ErrInvalidAddress {
-		t.Fatal("expected invalid address error")
+			server.SetExactMatch(test.exactMatch)
+
+			go func() { _ = server.Close() }() // Best effort.
+
+			if err := server.Serve(1, Dispatcher{
+				test.address: Method(func(msg Message) error {
+					return nil
+				}),
+			}); err != ErrInvalidAddress {
+				t.Fatal("expected invalid address error")
+			}
+		})
 	}
 }
 

@@ -108,12 +108,12 @@ type netWriter interface {
 	WriteTo([]byte, net.Addr) (int, error)
 }
 
-func checkDispatcher(dispatcher Dispatcher) error {
+func checkDispatcher(dispatcher Dispatcher, exactMatch bool) error {
 	if dispatcher == nil {
 		return ErrNilDispatcher
 	}
 	for addr := range dispatcher {
-		if err := ValidateAddress(addr); err != nil {
+		if err := ValidateAddress(addr, exactMatch); err != nil {
 			return err
 		}
 	}
@@ -129,7 +129,7 @@ type readSender interface {
 }
 
 func serve(r readSender, numWorkers int, exactMatch bool, dispatcher Dispatcher) error {
-	if err := checkDispatcher(dispatcher); err != nil {
+	if err := checkDispatcher(dispatcher, exactMatch); err != nil {
 		return err
 	}
 	var (
